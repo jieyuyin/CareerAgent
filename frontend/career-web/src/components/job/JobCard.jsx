@@ -1,0 +1,16 @@
+import { useLatestJobMatch } from '../../hooks/useJobRadar.js'
+
+const sourceLabel = { MANUAL: '手动录入', OFFICIAL_SITE: '官方招聘网站', BYTEDANCE: '字节跳动官网', THIRD_PARTY: '招聘平台' }
+const recruitmentLabel = { CAMPUS: '校招', INTERNSHIP: '实习', SOCIAL: '社招' }
+const relativeTime = (date) => { const hours = Math.max(1, Math.round((Date.now() - new Date(date).getTime()) / 36e5)); return hours < 24 ? `${hours} 小时前` : `${Math.round(hours / 24)} 天前` }
+
+export default function JobCard({ job, resumeId, selected, favored, onSelect, onFavorite, onDismiss }) {
+  const match = useLatestJobMatch(job.id, resumeId)
+  const report = match.data
+  const reasons = report ? [...(report.matchedSkills || []).slice(0, 2).map((s) => `${s} 能力已命中`), ...(report.evidence || []).filter((e) => e.result === 'MATCHED' && e.resumeSection !== 'SKILLS').slice(0, 1).map((e) => `${e.resumeSection === 'PROJECT' ? '项目' : '经历'}中有直接实践证据`)] : []
+  return <article onClick={onSelect} className={`group cursor-pointer border-b border-black/10 px-1 py-6 transition ${selected ? 'bg-[#ede9df]' : 'hover:bg-black/[.025]'}`}>
+    <div className="flex items-start justify-between gap-5 px-4"><div className="min-w-0"><p className="text-xs font-medium text-stone-500">{job.company}</p><h3 className="mt-1.5 text-xl font-semibold tracking-[-.02em]">{job.jobName}</h3><div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-stone-500"><span>{job.city || '城市待确认'}</span><span>·</span><span>{recruitmentLabel[job.recruitmentType] || job.recruitmentType}</span><span>·</span><span>{job.jobFocus?.[0] || job.keywords?.[0] || '等待分析岗位方向'}</span><span>·</span><span>{relativeTime(job.updatedAt)}</span>{job.source === 'BYTEDANCE' && <span className="rounded-full bg-[#dcecdf] px-2 py-0.5 text-[10px] font-semibold text-[#315d3b]">官网有效 · {relativeTime(job.lastVerifiedAt)}</span>}</div></div><div className="shrink-0 text-right">{match.isLoading ? <span className="text-xs text-stone-400">读取匹配…</span> : report ? <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${report.matchScore >= 80 ? 'bg-[#dcecdf] text-[#315d3b]' : report.matchScore >= 60 ? 'bg-[#dfe9ef] text-[#315669]' : 'bg-stone-200 text-stone-600'}`}>匹配参考 {report.matchScore}%</span> : <span className="rounded-full bg-[#eeeae2] px-2.5 py-1 text-xs text-stone-500">等待匹配</span>}<p className="mt-3 text-[11px] text-stone-400">{sourceLabel[job.source] || job.source}</p></div></div>
+    {reasons.length > 0 && <div className="mt-4 flex flex-wrap gap-2 px-4">{reasons.slice(0, 3).map((reason) => <span key={reason} className="rounded-md bg-[#e6eef1] px-2.5 py-1 text-[11px] text-[#3f5e69]">{reason}</span>)}</div>}
+    <div className="mt-5 flex items-center gap-2 px-4" onClick={(e) => e.stopPropagation()}><button onClick={onFavorite} className={`rounded-lg px-3 py-2 text-xs font-medium ${favored ? 'bg-[#dcecdf] text-[#315d3b]' : 'border border-black/10 hover:bg-white/60'}`}>{favored ? '✓ 值得投' : '值得投'}</button><button onClick={onDismiss} className="rounded-lg px-3 py-2 text-xs text-stone-400 hover:bg-white/60 hover:text-stone-700">不适合</button><button onClick={onSelect} className="ml-auto text-xs font-medium underline decoration-stone-300 underline-offset-4">查看岗位</button></div>
+  </article>
+}

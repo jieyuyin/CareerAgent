@@ -141,3 +141,22 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Java / Maven
+**/target/
+*.class
+*.jar
+*.war
+.mvn/timing.properties
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Local runtime data
+data/
+docker-data/
+# Local resume uploads
+backend/career-server/data/

@@ -1,0 +1,24 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import AppShell from '../components/layout/AppShell.jsx'
+import JobDetailPanel from '../components/job/JobDetailPanel.jsx'
+import JobMetrics from '../components/job/JobMetrics.jsx'
+import JobRadarHero from '../components/job/JobRadarHero.jsx'
+import JobSection from '../components/job/JobSection.jsx'
+import { useDefaultResume, useJobs, useLatestJobMatch } from '../hooks/useJobRadar.js'
+import { useAppStore } from '../stores/useAppStore.js'
+
+function ClassifiedJob({ job, resumeId, onResult }) { const query = useLatestJobMatch(job.id, resumeId); useEffect(() => { if (!query.isLoading) onResult(job.id, query.data || null) }, [job.id, onResult, query.data, query.isLoading]); return null }
+export default function JobRadarPage() {
+  const [searchParams] = useSearchParams()
+  const [filters, setFilters] = useState({ keyword: '', company: '', city: '', recruitmentType: '' }); const [applied, setApplied] = useState({ status: 'OPEN' })
+  const jobsQuery = useJobs(applied); const resumeQuery = useDefaultResume(); const [selectedId, setSelectedId] = useState(null); const [reports, setReports] = useState({})
+  const { favoredJobs, dismissedJobs, toggleFavored, dismissJob } = useAppStore(); const jobs = (jobsQuery.data?.items || []).filter((job) => !dismissedJobs.has(job.id) && (searchParams.get('view') !== 'favorite' || favoredJobs.has(job.id))); const activeId = selectedId || jobs[0]?.id
+  const handleReport = useCallback((id, value) => setReports((current) => current[id] === value ? current : { ...current, [id]: value }), [])
+  const grouped = useMemo(() => ({ priority: jobs.filter((j) => reports[j.id]?.matchScore >= 80), try: jobs.filter((j) => reports[j.id]?.matchScore >= 60 && reports[j.id]?.matchScore < 80), other: jobs.filter((j) => !reports[j.id] || reports[j.id]?.matchScore < 60) }), [jobs, reports])
+  const submit = (e) => { e.preventDefault(); setApplied({ status: 'OPEN', ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)) }) }
+  const sectionProps = { resumeId: resumeQuery.data?.id, selectedId: activeId, preferences: favoredJobs, onSelect: setSelectedId, onFavorite: toggleFavored, onDismiss: dismissJob }
+  return <AppShell><div className="flex"><div className="min-w-0 flex-1 px-9 py-10 xl:px-12"><JobRadarHero/><JobMetrics jobs={jobs} matches={Object.values(reports)} preferences={favoredJobs}/><form onSubmit={submit} className="mt-8 grid grid-cols-4 gap-2"><input value={filters.keyword} onChange={(e) => setFilters({ ...filters, keyword: e.target.value })} placeholder="搜索岗位名或公司" className="col-span-2 rounded-xl border border-black/10 bg-white/60 px-4 py-3 text-sm outline-none focus:border-black/30"/><input value={filters.company} onChange={(e) => setFilters({ ...filters, company: e.target.value })} placeholder="公司" className="rounded-xl border border-black/10 bg-white/60 px-3 text-sm outline-none"/><input value={filters.city} onChange={(e) => setFilters({ ...filters, city: e.target.value })} placeholder="城市" className="rounded-xl border border-black/10 bg-white/60 px-3 text-sm outline-none"/><select value={filters.recruitmentType} onChange={(e) => setFilters({ ...filters, recruitmentType: e.target.value })} className="col-span-2 rounded-xl border border-black/10 bg-white/60 px-3 py-3 text-sm outline-none"><option value="">全部类型</option><option value="CAMPUS">校招</option><option value="INTERNSHIP">实习</option><option value="SOCIAL">社招</option></select><button className="col-span-2 rounded-xl bg-[#1b1b18] px-5 py-3 text-sm font-semibold text-white">筛选</button></form>
+        {jobsQuery.isLoading && <div className="mt-12 space-y-5">{[1,2,3].map((i) => <div key={i} className="h-32 animate-pulse rounded-xl bg-black/5"/>)}</div>}{jobsQuery.isError && <div className="mt-16 text-center"><p className="text-sm text-red-700">岗位列表加载失败</p><button onClick={() => jobsQuery.refetch()} className="mt-3 text-sm underline">重新尝试</button></div>}{!jobsQuery.isLoading && !jobs.length && <div className="mt-20 border-y border-black/10 py-16 text-center"><p className="font-serif text-2xl">还没有值得处理的机会</p><p className="mt-3 text-sm text-stone-500">连接招聘官网后，公开岗位会自动进入这里。</p><div className="mt-6 flex justify-center gap-3"><Link to="/sources" className="rounded-xl bg-black px-4 py-2.5 text-sm text-white">＋ 添加官网源</Link><Link to="/preferences" className="rounded-xl border border-black/10 px-4 py-2.5 text-sm">调整关注偏好</Link></div></div>}
+        {jobs.map((job) => <ClassifiedJob key={job.id} job={job} resumeId={resumeQuery.data?.id} onResult={handleReport}/>) }<JobSection title="优先处理" jobs={grouped.priority} {...sectionProps}/><JobSection title="可以尝试" jobs={grouped.try} {...sectionProps}/><JobSection title="其他机会" jobs={grouped.other} {...sectionProps}/></div><JobDetailPanel jobId={activeId} resume={resumeQuery.data}/></div></AppShell>
+}

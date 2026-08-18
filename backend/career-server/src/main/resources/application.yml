@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: career-server
+  profiles:
+    default: dev
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  jackson:
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+
+career:
+  storage:
+    resume-dir: ${RESUME_STORAGE_DIR:./data/resumes}
+  config:
+    encryption-key: ${CAREER_CONFIG_ENCRYPTION_KEY:${POSTGRES_PASSWORD:career_agent_dev}}
+  ai:
+    provider: ${CAREER_AI_PROVIDER:mock}
+    model: ${CAREER_AI_MODEL:mock-career-agent}
+    base-url: ${CAREER_AI_BASE_URL:}
+    api-key: ${CAREER_AI_API_KEY:}
+  agent:
+    pending-action-expiry: ${AGENT_PENDING_ACTION_EXPIRY:30m}
+  job-source:
+    bytedance:
+      search-url: https://jobs.bytedance.com/api/v1/search/job/posts
+      user-agent: ${BYTEDANCE_JOB_USER_AGENT:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36}
+      campus-subject-id: ${BYTEDANCE_CAMPUS_SUBJECT_ID:7649336829398468869}
+      locations:
+        "[上海]": CT_125
+        "[杭州]": CT_52
+        "[北京]": CT_11
+        "[深圳]": CT_128

@@ -1,0 +1,3 @@
+export default function ResumeEmptyState({ onUpload, onCreate }) {
+  return <section className="mt-14 border-y border-black/10 py-20 text-center"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#e5ebe4] text-2xl">↗</span><h2 className="mt-6 font-serif text-3xl">还没有建立你的职业档案</h2><p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-stone-500">基础简历是你的 Master Resume。之后的岗位专属版本会从这里生成，不会反向覆盖母版。</p><div className="mt-8 flex justify-center gap-3"><button onClick={onUpload} className="rounded-xl bg-[#191917] px-6 py-3 text-sm font-semibold text-white">上传已有简历</button><button onClick={onCreate} className="rounded-xl border border-black/15 bg-white/50 px-6 py-3 text-sm font-semibold">从零创建简历</button></div></section>
+}
