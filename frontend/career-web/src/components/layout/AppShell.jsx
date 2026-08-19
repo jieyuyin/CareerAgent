@@ -3,8 +3,8 @@ import { NavLink, useLocation } from 'react-router-dom'
 const groups = [
   ['机会', [['岗位雷达', '/'], ['值得投', '/?view=favorite']]],
   ['简历', [['我的简历', '/resume'], ['匹配分析', '/matches']]],
-  ['求职进度', [['投递看板', '/applications'], ['面试准备', '/interviews/prepare'], ['面试复盘', '/interviews/review']]],
-  ['系统', [['模型配置', '/settings/model'], ['关注与偏好', '/preferences'], ['官网源管理', '/sources']]],
+  ['求职进度', [['求职进展', '/applications'], ['模拟面试', '/interviews']]],
+  ['系统', [['邮箱管理', '/settings/email'], ['模型配置', '/settings/model'], ['关注与偏好', '/preferences'], ['官网源管理', '/sources']]],
 ]
 
 export default function AppShell({ children }) {

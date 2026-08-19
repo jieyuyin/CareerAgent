@@ -38,6 +38,10 @@ public class ResumeService {
         var values = list();
         return values.isEmpty() ? null : values.get(0);
     }
+    public Resume currentEntity() {
+        var value = current();
+        return value == null ? null : owned(value.getId());
+    }
     public ResumeVO get(Long id) { return ResumeVO.from(owned(id)); }
     @Transactional
     public ResumeVO update(Long id, ResumeRequest request) {

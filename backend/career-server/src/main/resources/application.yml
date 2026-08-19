@@ -33,6 +33,9 @@ mybatis-plus:
 career:
   storage:
     resume-dir: ${RESUME_STORAGE_DIR:./data/resumes}
+    resume-pdf-dir: ${RESUME_PDF_STORAGE_DIR:./data/resume-pdfs}
+  pdf:
+    font-path: ${CAREER_PDF_FONT_PATH:}
   config:
     encryption-key: ${CAREER_CONFIG_ENCRYPTION_KEY:${POSTGRES_PASSWORD:career_agent_dev}}
   ai:

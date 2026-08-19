@@ -14,6 +14,18 @@ export const uploadResume = (file) => {
 }
 export const parseResumeText = (text) => http.post('/resumes/parse', { text }).then(({ data }) => data.data)
 export const diagnoseResume = (id) => http.post(`/resumes/${id}/diagnosis`).then(({ data }) => data.data)
+export const getResumeProfile = () => http.get('/resumes/profile').then(({ data }) => data.data)
+export const updateResumeProfile = (payload) => http.put('/resumes/profile', payload).then(({ data }) => data.data)
+export const polishResume = (payload) => http.post('/resumes/polish', payload).then(({ data }) => data.data)
+export const generateResume = (payload) => http.post('/resumes/generate', payload).then(({ data }) => data.data)
+export const getProfileVersions = () => http.get('/resumes/versions').then(({ data }) => data.data)
+export const exportResumePdf = async (id, master = false) => {
+  const path = master ? '/resumes/profile/export/pdf' : `/resumes/${id}/export/pdf`
+  const { data } = await http.get(path, { responseType: 'blob' })
+  const url = URL.createObjectURL(data), link = document.createElement('a')
+  link.href = url; link.download = master ? 'Master-Resume.pdf' : `Resume-Version-${id}.pdf`; link.click()
+  URL.revokeObjectURL(url)
+}
 
 export const createResumeVersion = (payload) => http.post('/resume-versions', payload).then(({ data }) => data.data)
 export const getResumeVersions = (params) => http.get('/resume-versions', { params }).then(({ data }) => data.data)

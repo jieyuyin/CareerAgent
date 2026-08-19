@@ -16,7 +16,7 @@ public class CreateApplicationTool implements AgentTool {
  public ToolResult execute(ToolContext c,Map<String,Object>a){
   var job=jobService.get(((Number)a.get("jobDescriptionId")).longValue()); var r=new ApplicationRequest();
   r.setJobDescriptionId(job.getId());r.setResumeVersionId(((Number)a.get("resumeVersionId")).longValue());r.setCompany(job.getCompany());r.setJobName(job.getJobName());
-  r.setChannel(ApplicationChannel.valueOf(a.get("channel").toString()));r.setStatus(ApplicationStatus.TO_APPLY);r.setRemark((String)a.get("remark"));
+  r.setChannel(ApplicationChannel.valueOf(a.get("channel").toString()));r.setStatus(ApplicationStatus.APPLIED);r.setRemark((String)a.get("remark"));
   return ToolResult.success(applicationService.create(r));
  }
 }

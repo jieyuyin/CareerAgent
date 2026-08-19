@@ -1,2 +1,2 @@
 package com.careeragent.domain.enums;
-public enum ApplicationStatus { TO_APPLY, APPLIED, SCREENING, ASSESSMENT, INTERVIEW, OFFER, CLOSED }
+public enum ApplicationStatus { APPLIED, SCREENING, ASSESSMENT, INTERVIEW, OFFER, REJECTED }

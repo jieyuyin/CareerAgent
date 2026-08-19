@@ -93,6 +93,8 @@ docker compose config
 - 岗位：`POST/GET /api/jobs`，`GET/PUT/DELETE /api/jobs/{id}`
 - 简历：`POST/GET /api/resumes`，`GET /api/resumes/current`，`GET/PUT/DELETE /api/resumes/{id}`，`PUT /api/resumes/{id}/default`
 - 简历智能处理：`POST /api/resumes/upload`（PDF/DOCX 草稿）、`POST /api/resumes/parse`、`POST /api/resumes/{id}/diagnosis`
+- 邮箱：`GET/POST /api/email/account`、`POST /api/email/test`、`POST /api/email/sync`、`GET /api/email/recruitment-emails`
+- 模拟面试：`POST/GET /api/interviews`、`GET /api/interviews/{id}/messages`、`POST /api/interviews/{id}/message`、`POST /api/interviews/{id}/finish`
 - 简历版本：`POST/GET /api/resume-versions`，`GET /api/resume-versions/{id}`
 - 投递：`POST/GET /api/applications`，`GET/PUT /api/applications/{id}`
 - 状态流转：`PUT /api/applications/{id}/status`
@@ -125,7 +127,26 @@ docker compose config
 - [x] JD Structured Output、Resume Match Evidence、RewriteSuggestion 人工审核
 - [x] PC 岗位雷达、搜索筛选、证据详情和专属简历入口
 - [x] Master Resume 上传解析、确认创建、编辑和 AI 诊断
+- [x] 163 邮箱连接、招聘邮件识别和投递状态联动
+- [x] 多会话模拟面试、AI 追问、历史恢复和面试总结
 - [x] 前端模型配置、加密密钥存储、OpenAI-compatible 动态路由
 - [x] Greenhouse/Lever 官网源管理、手动同步、标准化与数据库去重
 - [x] JobSourceAdapter、字节公开岗位搜索、城市映射、分页与岗位雷达导入
 - [ ] ResumeVersion、RAG 和 PDF
+
+
+起服务：
+doker：docker compose up -d
+后端：
+cd /Users/edy/Desktop/文档/Intern/CareerAgent/backend/career-server
+
+set -a
+source ../../.env
+set +a
+
+env -u LC_ALL \
+  LANG=en_US.UTF-8 \
+  LC_CTYPE=en_US.UTF-8 \
+  mvn spring-boot:run -Dspring-boot.run.profiles=dev
+
+前端：npm run dev

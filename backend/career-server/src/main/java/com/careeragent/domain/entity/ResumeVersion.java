@@ -17,6 +17,10 @@ public class ResumeVersion {
     private String versionName;
     private String targetCompany;
     private String targetJobName;
+    private String versionType;
+    private String contentMarkdown;
+    private String htmlContent;
+    private String pdfUrl;
     @TableField(typeHandler = PostgresJsonbTypeHandler.class) private Map<String, Object> snapshotData;
     private String changeSummary;
     private ResumeVersionStatus status;

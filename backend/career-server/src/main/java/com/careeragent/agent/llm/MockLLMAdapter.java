@@ -86,6 +86,11 @@ public class MockLLMAdapter extends AbstractJsonStructuredOutputAdapter {
         else if (responseType == ExperienceRewriteOutput.class) output = rewrite(data);
         else if (responseType == ResumeParseOutput.class) output = parseResume(data);
         else if (responseType == ResumeDiagnosisOutput.class) output = diagnoseResume(data);
+        else if (responseType == ResumePolishOutput.class) output = polishResume(data);
+        else if (responseType == ResumeGenerateOutput.class) output = generateResume(data);
+        else if (responseType == EmailAnalysisOutput.class) output = analyzeEmail(data);
+        else if (responseType == InterviewTurnOutput.class) output = interviewTurn(data);
+        else if (responseType == InterviewReportOutput.class) output = interviewReport(data);
         else throw new IllegalArgumentException("Unsupported mock structured type: " + responseType.getName());
         return objectMapper.writeValueAsString(output);
     }
@@ -204,5 +209,78 @@ public class MockLLMAdapter extends AbstractJsonStructuredOutputAdapter {
         if (resume.getProjects() == null || resume.getProjects().isEmpty()) improvements.add("项目经历缺少可引用证据");
         return new ResumeDiagnosisOutput(strengths, improvements,
                 List.of("描述个人负责边界、技术动作和可核验结果", "优先补充与目标岗位直接相关的证据"));
+    }
+
+    private ResumePolishOutput polishResume(Map<String, Object> data) {
+        var original = Objects.toString(data.get("content"), "").trim();
+        var polished = original.isBlank() ? "" : original.replace("负责", "负责设计并实现");
+        if (polished.equals(original)) polished = original + "（建议补充本人承担的技术动作与可核验结果）";
+        return new ResumePolishOutput(polished, List.of("强化职责与行动表达"),
+                List.of("请确认技术动作和结果均来自真实经历"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private ResumeGenerateOutput generateResume(Map<String, Object> data) {
+        var resume = objectMapper.convertValue(data.get("resume"), Resume.class);
+        var jobName = Objects.toString(data.get("jobName"), "目标岗位");
+        var company = Objects.toString(data.get("company"), "");
+        var markdown = new StringBuilder("# ").append(resume.getFullName()).append("\n\n")
+                .append(String.join(" · ", List.of(Objects.toString(resume.getPhone(), ""), Objects.toString(resume.getEmail(), ""), Objects.toString(resume.getLocation(), "")).stream().filter(s -> !s.isBlank()).toList()))
+                .append("\n\n## 求职方向\n").append(jobName).append("\n");
+        appendItems(markdown, "教育经历", resume.getEducation(), "school");
+        appendItems(markdown, "实习经历", resume.getExperiences(), "company");
+        appendItems(markdown, "项目经历", resume.getProjects(), "name");
+        markdown.append("\n## 技能\n").append(String.join(" · ", Optional.ofNullable(resume.getSkills()).orElse(List.of()))).append("\n");
+        return new ResumeGenerateOutput((company.isBlank() ? "" : company + " ") + jobName + "版", markdown.toString(),
+                "依据目标 JD 调整内容顺序；未添加 Master Resume 之外的事实", List.of(), List.of());
+    }
+
+    private void appendItems(StringBuilder markdown, String title, List<Map<String, Object>> items, String primary) {
+        markdown.append("\n## ").append(title).append("\n");
+        for (var item : Optional.ofNullable(items).orElse(List.of())) markdown.append("### ").append(Objects.toString(item.get(primary), "待确认"))
+                .append("\n").append(Objects.toString(item.get("description"), "")).append("\n");
+    }
+
+    private EmailAnalysisOutput analyzeEmail(Map<String, Object> data) {
+        var subject = Objects.toString(data.get("subject"), "");
+        var content = Objects.toString(data.get("content"), "");
+        var text = subject + "\n" + content;
+        var lower = text.toLowerCase();
+        var type = subject.contains("面试") ? RecruitmentEmailType.INTERVIEW
+                : subject.contains("笔试") || subject.contains("测评") ? RecruitmentEmailType.ASSESSMENT
+                : subject.contains("遗憾") || subject.contains("不合适") || subject.contains("未通过") ? RecruitmentEmailType.REJECTED
+                : lower.contains("offer") || text.contains("录用") ? RecruitmentEmailType.OFFER
+                : text.contains("面试") ? RecruitmentEmailType.INTERVIEW
+                : text.contains("笔试") || text.contains("测评") ? RecruitmentEmailType.ASSESSMENT
+                : text.contains("遗憾") || text.contains("不合适") || text.contains("未通过") ? RecruitmentEmailType.REJECTED
+                : RecruitmentEmailType.UNKNOWN;
+        var company = explicitGroup(subject, "(?:【|\\[)?([^【】\\[\\]：:]{2,30}?)(?:】|\\])?(?:招聘|校招|面试|笔试|测评|录用|offer)");
+        var job = explicitGroup(text, "([\\p{IsHan}A-Za-z0-9 +#.-]{2,40}(?:工程师|开发|产品经理|设计师|岗位))");
+        return new EmailAnalysisOutput(type, company, job, type == RecruitmentEmailType.UNKNOWN ? 0.35 : 0.85);
+    }
+
+    private String explicitGroup(String text, String regex) {
+        var matcher = Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(text);
+        return matcher.find() ? matcher.group(1).trim() : "";
+    }
+
+    private InterviewTurnOutput interviewTurn(Map<String, Object> data) {
+        var history = objectMapper.convertValue(data.getOrDefault("history", List.of()), List.class);
+        var mode = Objects.toString(data.get("mode"), "FULL");
+        var stage = Objects.toString(data.get("stage"), "TECH_ONE");
+        if (history.isEmpty()) return new InterviewTurnOutput("你好，我是本次模拟面试官。请先做一个简短的自我介绍，并说明你最希望我们深入讨论的一段真实经历。");
+        var last = history.get(history.size() - 1).toString();
+        if ("PROJECT_DEEP".equals(mode)) return new InterviewTurnOutput("你刚才提到的内容中，哪一部分是你亲自负责的？请具体说明技术选型、遇到的难点和你的解决过程。");
+        if ("TECH_FOCUS".equals(mode)) return new InterviewTurnOutput("请从技术原理角度展开说明，并解释为什么选择这个方案而不是常见替代方案。");
+        if ("PRESSURE".equals(mode)) return new InterviewTurnOutput("这个回答目前还比较概括。请给出一个可验证的具体案例，并说明如果方案失败你会如何定位问题。");
+        return new InterviewTurnOutput(("HR".equals(stage)?"这段经历如何影响了你的求职选择？":"请进一步说明其中最关键的技术决策，以及你个人承担的职责。")+"我会基于你的真实回答继续追问。");
+    }
+
+    private InterviewReportOutput interviewReport(Map<String, Object> data) {
+        var history = objectMapper.convertValue(data.getOrDefault("history", List.of()), List.class);
+        var userAnswers = history.stream().filter(item -> item.toString().contains("role=user")).count();
+        var score = (int)Math.min(88, 55 + userAnswers * 8);
+        return new InterviewReportOutput(score, userAnswers > 0 ? "能够围绕问题提供回答，具备继续深挖的基础" : "有效回答信息不足",
+                "部分回答仍缺少个人职责、技术决策和结果证据", "使用背景—任务—行动—结果结构作答，并补充可核验的技术细节");
     }
 }

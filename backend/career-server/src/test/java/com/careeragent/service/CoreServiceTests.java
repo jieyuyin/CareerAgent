@@ -33,7 +33,7 @@ class CoreServiceTests {
         application.setStatus(ApplicationStatus.APPLIED);
         when(currentUser.getCurrentUserId()).thenReturn(1L);
         when(applicationMapper.selectOne(any())).thenReturn(application);
-        var service = new ApplicationService(applicationMapper, eventMapper, jobService, versionService, currentUser);
+        var service = new ApplicationService(applicationMapper, eventMapper, jobService, versionService, mock(ResumeService.class), currentUser);
         var request = new ApplicationStatusRequest(); request.setStatus(ApplicationStatus.INTERVIEW); request.setRemark("一面");
 
         service.updateStatus(9L, request);

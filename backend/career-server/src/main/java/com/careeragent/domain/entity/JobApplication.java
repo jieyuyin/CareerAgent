@@ -16,6 +16,7 @@ public class JobApplication {
     private String jobName;
     private ApplicationChannel channel;
     private ApplicationStatus status;
+    private ApplicationInterviewStage interviewStage;
     private OffsetDateTime appliedAt;
     private String nextAction;
     private OffsetDateTime nextActionAt;

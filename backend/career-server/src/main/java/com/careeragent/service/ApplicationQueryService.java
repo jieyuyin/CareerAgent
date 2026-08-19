@@ -1,0 +1,8 @@
+package com.careeragent.service;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;import com.careeragent.domain.entity.*;import com.careeragent.mapper.*;import com.careeragent.vo.*;import java.util.*;import lombok.RequiredArgsConstructor;import org.springframework.stereotype.Service;
+@Service @RequiredArgsConstructor
+public class ApplicationQueryService {
+ private final ApplicationService applications;private final RecruitmentEmailMapper emailMapper;private final InterviewSessionMapper sessionMapper;private final InterviewReportMapper reportMapper;
+ public ApplicationDetailVO detail(Long id){var detail=applications.get(id);detail.setEmails(emailMapper.selectList(Wrappers.<RecruitmentEmail>lambdaQuery().eq(RecruitmentEmail::getApplicationId,id).orderByDesc(RecruitmentEmail::getReceivedTime)).stream().map(RecruitmentEmailVO::from).toList());detail.setInterviews(sessionMapper.selectList(Wrappers.<InterviewSession>lambdaQuery().eq(InterviewSession::getApplicationId,id).orderByDesc(InterviewSession::getCreatedAt)).stream().map(session->toVO(session,detail)).toList());return detail;}
+ private InterviewSessionVO toVO(InterviewSession session,ApplicationDetailVO detail){var report=reportMapper.selectOne(Wrappers.<InterviewReport>lambdaQuery().eq(InterviewReport::getSessionId,session.getId()));return new InterviewSessionVO(session.getId(),session.getApplicationId(),session.getJobId(),detail.getCompany(),detail.getJobName(),session.getStage(),session.getMode(),session.getDuration(),session.getModel(),session.getStatus(),session.getScore(),session.getCreatedAt(),session.getUpdatedAt(),InterviewReportVO.from(report));}
+}

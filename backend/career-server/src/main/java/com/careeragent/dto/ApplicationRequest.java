@@ -13,6 +13,7 @@ public class ApplicationRequest {
     @NotBlank @Size(max=200) private String jobName;
     @NotNull private ApplicationChannel channel;
     @NotNull private ApplicationStatus status;
+    private ApplicationInterviewStage interviewStage;
     private OffsetDateTime appliedAt;
     @Size(max=500) private String nextAction;
     private OffsetDateTime nextActionAt;

@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.hwpf.HWPFDocument;
+import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -56,6 +58,10 @@ public class ResumeIntelligenceService {
         if ("pdf".equals(extension)) {
             try (var document = Loader.loadPDF(path.toFile())) { return new PDFTextStripper().getText(document); }
         }
+        if ("doc".equals(extension)) {
+            try (InputStream input = Files.newInputStream(path); var document = new HWPFDocument(input);
+                 var extractor = new WordExtractor(document)) { return extractor.getText(); }
+        }
         try (InputStream input = Files.newInputStream(path); var document = new XWPFDocument(input)) {
             return document.getParagraphs().stream().map(p -> p.getText()).reduce("", (a, b) -> a + "\n" + b);
         }
@@ -64,7 +70,7 @@ public class ResumeIntelligenceService {
     private void validate(MultipartFile file) {
         if (file == null || file.isEmpty()) throw new BusinessException(40052, "请选择 PDF 或 DOCX 简历");
         var extension = extension(file.getOriginalFilename());
-        if (!"pdf".equals(extension) && !"docx".equals(extension)) throw new BusinessException(40053, "只支持 PDF 和 DOCX 文件");
+        if (!"pdf".equals(extension) && !"doc".equals(extension) && !"docx".equals(extension)) throw new BusinessException(40053, "只支持 PDF、DOC 和 DOCX 文件");
         if (file.getSize() > 10 * 1024 * 1024) throw new BusinessException(40054, "简历文件不能超过 10MB");
     }
 
