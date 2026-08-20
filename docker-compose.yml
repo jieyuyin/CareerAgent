@@ -32,6 +32,59 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: ./backend/career-server
+    container_name: career-agent-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-career_agent}
+      POSTGRES_USER: ${POSTGRES_USER:-career_agent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-career_agent_dev}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-career_agent_dev}
+      SERVER_PORT: 8080
+      CAREER_AI_PROVIDER: ${CAREER_AI_PROVIDER:-mock}
+      CAREER_AI_MODEL: ${CAREER_AI_MODEL:-mock-career-agent}
+      CAREER_AI_BASE_URL: ${CAREER_AI_BASE_URL:-}
+      CAREER_AI_API_KEY: ${CAREER_AI_API_KEY:-}
+      CAREER_CONFIG_ENCRYPTION_KEY: ${CAREER_CONFIG_ENCRYPTION_KEY:-career_agent_dev_encryption_key}
+      BYTEDANCE_JOB_USER_AGENT: ${BYTEDANCE_JOB_USER_AGENT:-Mozilla/5.0}
+      BYTEDANCE_CAMPUS_SUBJECT_ID: ${BYTEDANCE_CAMPUS_SUBJECT_ID:-7649336829398468869}
+      RESUME_STORAGE_DIR: /data/resumes
+      RESUME_PDF_STORAGE_DIR: /data/resume-pdfs
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    volumes:
+      - resume_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend/career-web
+    container_name: career-agent-frontend
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:
+  resume_data:

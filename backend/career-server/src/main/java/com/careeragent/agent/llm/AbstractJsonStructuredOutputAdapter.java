@@ -16,7 +16,8 @@ public abstract class AbstractJsonStructuredOutputAdapter implements LLMAdapter 
             try {
                 var json = generateStructuredJson(prompt, input, responseType, attempt);
                 return objectMapper.readValue(json, responseType);
-            } catch (Exception ex) { last = ex; }
+            } catch (LLMProviderException ex) { throw ex; }
+            catch (Exception ex) { last = ex; }
         }
         throw new LLMProviderException("Structured output parsing failed after 3 attempts: " + last.getMessage());
     }

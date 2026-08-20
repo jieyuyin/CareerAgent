@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.function.Consumer;
 public class MockLLMAdapter extends AbstractJsonStructuredOutputAdapter {
     private static final Pattern JOB_ID = Pattern.compile("岗位\\s*(?:ID)?\\s*[：:#]?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern RESUME_ID = Pattern.compile("简历\\s*(?:ID)?\\s*[：:#]?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
@@ -14,6 +15,10 @@ public class MockLLMAdapter extends AbstractJsonStructuredOutputAdapter {
     private static final Pattern APPLICATION_ID = Pattern.compile("投递\\s*(?:ID)?\\s*[：:#]?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
 
     public MockLLMAdapter(ObjectMapper objectMapper) { super(objectMapper); }
+
+    @Override public AgentModelResponse chatStream(AgentModelRequest request,Consumer<String> onDelta){var response=chat(request);if(response.type()==AgentModelResponse.Type.MESSAGE)emit(response.content(),onDelta);return response;}
+    @Override public String textStream(String prompt,Object input,String modelOverride,Consumer<String> onDelta){var output=structuredOutput(prompt,input,InterviewTurnOutput.class);var text=output.reply();emit(text,onDelta);return text;}
+    private void emit(String value,Consumer<String> onDelta){for(int i=0;i<value.length();i+=4)onDelta.accept(value.substring(i,Math.min(value.length(),i+4)));}
 
     @Override
     public AgentModelResponse chat(AgentModelRequest request) {
@@ -91,6 +96,7 @@ public class MockLLMAdapter extends AbstractJsonStructuredOutputAdapter {
         else if (responseType == EmailAnalysisOutput.class) output = analyzeEmail(data);
         else if (responseType == InterviewTurnOutput.class) output = interviewTurn(data);
         else if (responseType == InterviewReportOutput.class) output = interviewReport(data);
+        else if (responseType == InterviewAnswerEvaluationOutput.class) output = interviewAnswerEvaluation(data);
         else throw new IllegalArgumentException("Unsupported mock structured type: " + responseType.getName());
         return objectMapper.writeValueAsString(output);
     }
@@ -273,9 +279,10 @@ public class MockLLMAdapter extends AbstractJsonStructuredOutputAdapter {
         if ("PROJECT_DEEP".equals(mode)) return new InterviewTurnOutput("你刚才提到的内容中，哪一部分是你亲自负责的？请具体说明技术选型、遇到的难点和你的解决过程。");
         if ("TECH_FOCUS".equals(mode)) return new InterviewTurnOutput("请从技术原理角度展开说明，并解释为什么选择这个方案而不是常见替代方案。");
         if ("PRESSURE".equals(mode)) return new InterviewTurnOutput("这个回答目前还比较概括。请给出一个可验证的具体案例，并说明如果方案失败你会如何定位问题。");
-        return new InterviewTurnOutput(("HR".equals(stage)?"这段经历如何影响了你的求职选择？":"请进一步说明其中最关键的技术决策，以及你个人承担的职责。")+"我会基于你的真实回答继续追问。");
+        return new InterviewTurnOutput(("HR".equals(stage)?"这段经历如何影响了你的求职选择？":"请进一步说明其中最关键的业务或专业判断，以及你个人承担的职责。")+"我会基于你的真实回答继续追问。");
     }
 
+    private InterviewAnswerEvaluationOutput interviewAnswerEvaluation(Map<String,Object> data){var answer=Objects.toString(data.get("answer"),"");var completeness=Math.min(95,35+answer.length()/3);var technical=Math.min(95,45+answer.length()/4);var communication=Math.min(95,55+answer.length()/5);var score=(technical*45+completeness*35+communication*20)/100;var missing=new ArrayList<String>();if(answer.length()<80)missing.add("回答需要补充具体实现细节");if(!answer.matches(".*\\d+.*"))missing.add("缺少可验证的量化结果");return new InterviewAnswerEvaluationOutput(technical,completeness,communication,score,List.of("回答与当前问题相关"),missing,List.of(),score<72?InterviewDecision.FOLLOW_UP:InterviewDecision.NEXT_TOPIC);}
     private InterviewReportOutput interviewReport(Map<String, Object> data) {
         var history = objectMapper.convertValue(data.getOrDefault("history", List.of()), List.class);
         var userAnswers = history.stream().filter(item -> item.toString().contains("role=user")).count();

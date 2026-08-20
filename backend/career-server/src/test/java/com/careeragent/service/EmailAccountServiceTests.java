@@ -5,6 +5,7 @@ import com.careeragent.agent.structured.EmailAnalysisOutput;
 import com.careeragent.domain.entity.*;
 import com.careeragent.domain.enums.*;
 import com.careeragent.dto.EmailAccountRequest;
+import com.careeragent.dto.EmailSyncSettingsRequest;
 import com.careeragent.email.*;
 import com.careeragent.mapper.*;
 import com.careeragent.security.CurrentUserProvider;
@@ -17,6 +18,23 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class EmailAccountServiceTests {
+ @Test void updateSyncSettingsSchedulesNextRun(){
+  var accounts=mock(EmailAccountMapper.class);var current=mock(CurrentUserProvider.class);var account=new EmailAccount();account.setId(7L);account.setUserId(1L);
+  when(current.getCurrentUserId()).thenReturn(1L);when(accounts.selectOne(any())).thenReturn(account);
+  var service=new EmailAccountService(accounts,mock(RecruitmentEmailMapper.class),mock(EmailInboxClient.class),new SecretCryptoService("test-key"),current,mock(LLMAdapter.class),mock(ApplicationService.class));
+  var before=OffsetDateTime.now();var result=service.updateSyncSettings(new EmailSyncSettingsRequest(true,6));
+  assertThat(result.autoSyncEnabled()).isTrue();assertThat(result.syncIntervalHours()).isEqualTo(6);assertThat(result.nextSyncTime()).isAfterOrEqualTo(before.plusHours(6));verify(accounts).updateById(account);
+ }
+
+ @Test void schedulerSyncsDueAccounts(){
+  var accounts=mock(EmailAccountMapper.class);var inbox=mock(EmailInboxClient.class);var crypto=new SecretCryptoService("test-key");var account=new EmailAccount();
+  account.setId(7L);account.setUserId(1L);account.setEmail("career@163.com");account.setEncryptedAuthorizationCode(crypto.encrypt("imap-code"));account.setAutoSyncEnabled(true);account.setSyncIntervalHours(2);
+  when(accounts.selectList(any())).thenReturn(List.of(account));when(inbox.fetch(eq("career@163.com"),eq("imap-code"),any())).thenReturn(List.of());
+  var service=new EmailAccountService(accounts,mock(RecruitmentEmailMapper.class),inbox,crypto,mock(CurrentUserProvider.class),mock(LLMAdapter.class),mock(ApplicationService.class));
+  service.syncDueAccounts();
+  assertThat(account.getLastSyncTime()).isNotNull();assertThat(account.getNextSyncTime()).isAfter(account.getLastSyncTime());assertThat(account.getStatus()).isEqualTo(EmailAccountStatus.CONNECTED);verify(accounts).updateById(account);
+ }
+
  @Test void bindEncryptsAuthorizationCodeBeforeSaving(){
   var accounts=mock(EmailAccountMapper.class);var inbox=mock(EmailInboxClient.class);var current=mock(CurrentUserProvider.class);
   when(current.getCurrentUserId()).thenReturn(1L);when(accounts.selectOne(any())).thenReturn(null);

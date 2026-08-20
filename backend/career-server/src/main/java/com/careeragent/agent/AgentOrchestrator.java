@@ -13,6 +13,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.*;
 import java.util.*;
+import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,23 @@ public class AgentOrchestrator {
         var events = new ArrayList<AgentStreamEvent>();
         events.add(AgentStreamEvent.of("conversation", conversation.getId(), null, null, null, Map.of("conversationId", conversation.getId())));
         return processModel(conversation, events);
+    }
+
+    @Transactional
+    public AgentOutcome chatStream(Long requestedConversationId,String userMessage,Consumer<AgentStreamEvent> sink){
+        var conversation=requestedConversationId==null?createConversation(userMessage):ownedConversation(requestedConversationId);saveMessage(conversation.getId(),MessageRole.USER,userMessage,Map.of());
+        var events=new ArrayList<AgentStreamEvent>();var conversationEvent=AgentStreamEvent.of("conversation",conversation.getId(),null,null,null,Map.of("conversationId",conversation.getId()));events.add(conversationEvent);sink.accept(conversationEvent);
+        for(int step=0;step<MAX_TOOL_STEPS;step++){
+            var response=llmAdapter.chatStream(modelRequest(conversation.getId()),delta->{var event=AgentStreamEvent.of("message_delta",conversation.getId(),null,null,null,delta);events.add(event);sink.accept(event);});
+            if(response.type()==AgentModelResponse.Type.MESSAGE)return completeStreamMessage(conversation,response.content(),events,sink);
+            for(var call:response.toolCalls()){
+                var tool=toolRegistry.getTool(call.name());argumentValidator.validate(tool,call.arguments());var execution=new ToolExecution();execution.setConversationId(conversation.getId());execution.setToolCallId(call.id());execution.setToolName(call.name());execution.setInputData(call.arguments());execution.setStatus(ToolExecutionStatus.PENDING);executionMapper.insert(execution);
+                var progress=progressMessage(call.name());if(progress!=null)emit(events,sink,AgentStreamEvent.of("status",conversation.getId(),execution.getId(),null,call.name(),progress));emit(events,sink,AgentStreamEvent.of("tool_start",conversation.getId(),execution.getId(),null,call.name(),call.arguments()));
+                if(tool.requiresConfirmation()){var before=events.size();var outcome=awaitConfirmation(conversation,execution,tool,call.arguments(),events);events.subList(before,events.size()).forEach(sink);return outcome;}
+                var before=events.size();executeTool(conversation,execution,tool,call.arguments(),events);events.subList(before,events.size()).forEach(sink);
+            }
+        }
+        return completeStreamMessage(conversation,"已达到单次对话的最大工具步骤（"+MAX_TOOL_STEPS+"），为避免无限循环已停止。",events,sink);
     }
 
     private AgentOutcome processModel(AgentConversation conversation, List<AgentStreamEvent> events) {
@@ -161,6 +179,8 @@ public class AgentOrchestrator {
         events.add(AgentStreamEvent.of("done", conversation.getId(), null, null, null, Map.of("status", "COMPLETED")));
         return new AgentOutcome(new AgentChatResponse(conversation.getId(), "COMPLETED", text, null), events);
     }
+    private AgentOutcome completeStreamMessage(AgentConversation conversation,String text,List<AgentStreamEvent> events,Consumer<AgentStreamEvent> sink){saveMessage(conversation.getId(),MessageRole.ASSISTANT,text,Map.of());conversation.setStatus(ConversationStatus.COMPLETED);conversation.setContextData(Map.of());conversationMapper.updateById(conversation);var message=AgentStreamEvent.of("message",conversation.getId(),null,null,null,text);var done=AgentStreamEvent.of("done",conversation.getId(),null,null,null,Map.of("status","COMPLETED"));emit(events,sink,message);emit(events,sink,done);return new AgentOutcome(new AgentChatResponse(conversation.getId(),"COMPLETED",text,null),events);}
+    private void emit(List<AgentStreamEvent> events,Consumer<AgentStreamEvent> sink,AgentStreamEvent event){events.add(event);sink.accept(event);}
 
     private AgentConversation createConversation(String message) {
         var entity = new AgentConversation(); entity.setUserId(currentUserProvider.getCurrentUserId());

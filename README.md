@@ -29,7 +29,28 @@ CareerAgent/
 - Java 17 与 Maven 3.9+
 - Docker 与 Docker Compose
 
-## 快速启动
+## 一键启动（推荐）
+
+本机只需要安装 Docker Desktop，不需要单独安装 Java、Maven、Node.js、PostgreSQL 或 Redis。
+
+```bash
+cp .env.example .env   # 首次启动，可按需填写模型配置
+./career-agent up
+```
+
+启动完成后访问 <http://localhost:5173>。常用命令：
+
+```bash
+./career-agent status   # 查看所有服务状态
+./career-agent logs     # 查看实时日志
+./career-agent restart  # 重新构建并启动
+./career-agent down     # 停止服务，保留数据库数据
+./career-agent update   # 拉取代码并重新构建启动
+```
+
+首次运行需要下载基础镜像和依赖，耗时会长一些；后续构建会复用 Docker 缓存。
+
+## 本地开发启动
 
 1. 创建本地环境变量文件：
 
@@ -37,7 +58,7 @@ CareerAgent/
    cp .env.example .env
    ```
 
-2. 启动 PostgreSQL 和 Redis：
+2. 只启动 PostgreSQL 和 Redis：
 
    ```bash
    docker compose up -d
@@ -133,20 +154,3 @@ docker compose config
 - [x] Greenhouse/Lever 官网源管理、手动同步、标准化与数据库去重
 - [x] JobSourceAdapter、字节公开岗位搜索、城市映射、分页与岗位雷达导入
 - [ ] ResumeVersion、RAG 和 PDF
-
-
-起服务：
-doker：docker compose up -d
-后端：
-cd /Users/edy/Desktop/文档/Intern/CareerAgent/backend/career-server
-
-set -a
-source ../../.env
-set +a
-
-env -u LC_ALL \
-  LANG=en_US.UTF-8 \
-  LC_CTYPE=en_US.UTF-8 \
-  mvn spring-boot:run -Dspring-boot.run.profiles=dev
-
-前端：npm run dev

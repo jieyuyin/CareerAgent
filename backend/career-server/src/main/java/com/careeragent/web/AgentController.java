@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/agent")
@@ -23,15 +24,7 @@ public class AgentController {
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@Valid @RequestBody AgentChatRequest request) {
         var emitter = new SseEmitter(60_000L);
-        try {
-            var outcome = orchestrator.chat(request.conversationId(), request.message());
-            for (var event : outcome.events()) emitter.send(SseEmitter.event().name(event.type()).data(event));
-            emitter.complete();
-        } catch (Exception ex) {
-            try { emitter.send(SseEmitter.event().name("error").data(java.util.Map.of("message", ex.getMessage()))); }
-            catch (Exception ignored) { }
-            emitter.complete();
-        }
+        CompletableFuture.runAsync(()->{try{orchestrator.chatStream(request.conversationId(),request.message(),event->{try{emitter.send(SseEmitter.event().name(event.type()).data(event));}catch(Exception exception){throw new RuntimeException(exception);}});emitter.complete();}catch(Exception ex){try{emitter.send(SseEmitter.event().name("error").data(java.util.Map.of("message",ex.getMessage())));}catch(Exception ignored){}emitter.complete();}});
         return emitter;
     }
 

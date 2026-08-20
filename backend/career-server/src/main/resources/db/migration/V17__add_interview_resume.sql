@@ -1,0 +1,1 @@
+ALTER TABLE interview_session ADD COLUMN resume_id BIGINT REFERENCES resume(id) ON DELETE RESTRICT;

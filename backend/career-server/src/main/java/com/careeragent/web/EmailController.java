@@ -1,5 +1,6 @@
 package com.careeragent.web;
 import com.careeragent.dto.EmailAccountRequest;
+import com.careeragent.dto.EmailSyncSettingsRequest;
 import com.careeragent.service.EmailAccountService;
 import com.careeragent.vo.*;
 import jakarta.validation.Valid;
@@ -13,6 +14,7 @@ public class EmailController {
  @GetMapping("/account") public ApiResponse<EmailAccountVO> account(){return ApiResponse.success(service.current());}
  @PostMapping("/test") public ApiResponse<Void> test(@Valid @RequestBody EmailAccountRequest request){service.test(request);return ApiResponse.success();}
  @PostMapping("/account") public ApiResponse<EmailAccountVO> bind(@Valid @RequestBody EmailAccountRequest request){return ApiResponse.success(service.bind(request));}
+ @PutMapping("/account/sync-settings") public ApiResponse<EmailAccountVO> syncSettings(@Valid @RequestBody EmailSyncSettingsRequest request){return ApiResponse.success(service.updateSyncSettings(request));}
  @PostMapping("/sync") public ApiResponse<EmailSyncResultVO> sync(){return ApiResponse.success(service.sync());}
  @GetMapping("/recruitment-emails") public ApiResponse<List<RecruitmentEmailVO>> emails(){return ApiResponse.success(service.emails());}
  @PostMapping("/recruitment-emails/{id}/reanalyze") public ApiResponse<RecruitmentEmailVO> reanalyze(@PathVariable @Positive Long id){return ApiResponse.success(service.reanalyze(id));}

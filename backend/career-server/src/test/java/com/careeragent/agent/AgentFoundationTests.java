@@ -58,4 +58,6 @@ class AgentFoundationTests {
         assertThat(response.toolCalls().get(0).name()).isEqualTo("create_application");
         assertThat(response.toolCalls().get(0).arguments()).containsEntry("resumeVersionId", 7L);
     }
+
+    @Test void mockLlmEmitsRealMessageDeltas(){var adapter=new MockLLMAdapter(new ObjectMapper().findAndRegisterModules());var deltas=new ArrayList<String>();var response=adapter.chatStream(new AgentModelRequest(List.of(new AgentModelMessage("USER","你好",Map.of())),List.of()),deltas::add);assertThat(deltas).hasSizeGreaterThan(1);assertThat(String.join("",deltas)).isEqualTo(response.content());}
 }
